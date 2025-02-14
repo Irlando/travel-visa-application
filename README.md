@@ -144,6 +144,17 @@ The application can be deployed to any static hosting service that supports sing
 For technical support, contact:
 - Email: support@caboverdevisa.gov.cv
 - Phone: +238 123 456 789
+## Regras para Fazer Commit
+
+Para garantir a integridade do projeto, siga estas regras ao fazer commits:
+
+1. **main**: A branch `main` está protegida. Todos os commits devem ser feitos através de pull requests.
+2. **Revisão de Código**: Todos os pull requests devem ser revisados e aprovados por pelo menos um colaborador antes de serem mesclados.
+3. **Testes Automatizados**: Certifique-se de que todos os testes automatizados passem antes de abrir um pull request.
+4. **Mensagens de Commit**: Use mensagens de commit claras e descritivas. Siga o padrão: `Tipo: Descrição breve do commit`.
+5. **Commits Pequenos e Frequentes**: Faça commits pequenos e frequentes para facilitar a revisão de código e a identificação de problemas.
+
+Seguindo essas recomendações, garantimos a qualidade e a estabilidade do código.
 
 ## License
 
