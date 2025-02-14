@@ -1,4 +1,5 @@
 export interface TouristFormData {
+  email: string;
   givenNames: string;
   lastNames: string;
   sex: 'M' | 'F';

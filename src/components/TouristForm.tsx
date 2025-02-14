@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { submitTouristApplication } from '../lib/api';
 import type { TouristFormData } from '../types';
 
 interface TouristFormProps {
@@ -12,11 +14,32 @@ export default function TouristForm({ language, onBack }: TouristFormProps) {
     acceptedTerms: false,
     hasExistingVisa: false
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log(formData);
+    
+    try {
+      setIsSubmitting(true);
+      const result = await submitTouristApplication(formData as TouristFormData, language);
+      
+      if (result.success) {
+        // Store reference for status checking
+        localStorage.setItem('applicationReference', result.reference);
+        
+        // Redirect to payment
+        window.location.href = result.paymentUrl;
+      }
+    } catch (error) {
+      console.error('Submission error:', error);
+      toast.error(
+        language === 'en' 
+          ? 'Failed to submit application. Please try again.' 
+          : 'Falha ao enviar pedido. Por favor, tente novamente.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,6 +91,18 @@ export default function TouristForm({ language, onBack }: TouristFormProps) {
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   onChange={e => setFormData(prev => ({ ...prev, lastNames: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {language === 'en' ? 'Email' : 'Email'}
+                </label>
+                <input
+                  type="email"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 />
               </div>
 
@@ -338,9 +373,14 @@ export default function TouristForm({ language, onBack }: TouristFormProps) {
           <div className="mt-8">
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition-colors"
+              disabled={isSubmitting}
+              className="w-full bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
             >
-              {language === 'en' ? 'Submit Application' : 'Enviar Pedido'}
+              {isSubmitting ? (
+                language === 'en' ? 'Submitting...' : 'Enviando...'
+              ) : (
+                language === 'en' ? 'Submit Application' : 'Enviar Pedido'
+              )}
             </button>
           </div>
         </form>

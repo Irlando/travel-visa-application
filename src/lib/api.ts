@@ -1,7 +1,6 @@
 import { supabase } from './supabase';
 import { TouristFormSchema, AgencyFormSchema } from './validation';
-import { calculateFees, initiateSISPPayment } from './payment';
-import { sendEmail, generateConfirmationEmail } from './email';
+import { calculateFees } from './payment';
 import toast from 'react-hot-toast';
 
 export async function submitTouristApplication(data: TouristFormSchema, language: 'en' | 'pt') {
@@ -9,7 +8,7 @@ export async function submitTouristApplication(data: TouristFormSchema, language
     // Calculate fees
     const fees = calculateFees(35.80); // EASE assistance fee
 
-    // Start a transaction
+    // Start application submission
     const { data: application, error: applicationError } = await supabase
       .from('applications')
       .insert({
@@ -52,30 +51,27 @@ export async function submitTouristApplication(data: TouristFormSchema, language
       if (uploadError) throw uploadError;
     }
 
-    // Initiate payment
-    const paymentUrl = await initiateSISPPayment({
-      amount: fees.total,
-      currency: 'EUR',
-      reference: application.reference_number,
-      description: language === 'en' ? 'EASE Assistance' : 'Assistência EASE',
-      returnUrl: `${window.location.origin}/payment/success`,
-      cancelUrl: `${window.location.origin}/payment/cancel`
-    });
+    // For development, simulate payment URL
+    const paymentUrl = `/payment/result?reference=${application.reference_number}`;
 
-    // Send confirmation email
-    await sendEmail({
-      to: data.email,
-      ...generateConfirmationEmail({
-        reference: application.reference_number,
-        name: `${data.givenNames} ${data.lastNames}`,
-        amount: fees.total,
-        type: 'tourist'
-      }, language)
-    });
+    // Store reference for status checking
+    localStorage.setItem('applicationReference', application.reference_number);
 
-    return { success: true, paymentUrl, reference: application.reference_number };
+    return { 
+      success: true, 
+      paymentUrl, 
+      reference: application.reference_number 
+    };
   } catch (error) {
     console.error('Application submission failed:', error);
+    
+    // Show user-friendly error message
+    const errorMessage = language === 'en'
+      ? 'Failed to submit application. Please try again.'
+      : 'Falha ao enviar pedido. Por favor, tente novamente.';
+    
+    toast.error(errorMessage);
+    
     throw error;
   }
 }
@@ -85,7 +81,7 @@ export async function submitAgencyApplication(data: AgencyFormSchema, language: 
     // Calculate fees
     const fees = calculateFees(62.00); // Visa assistance fee
 
-    // Start a transaction
+    // Start application submission
     const { data: application, error: applicationError } = await supabase
       .from('applications')
       .insert({
@@ -142,45 +138,50 @@ export async function submitAgencyApplication(data: AgencyFormSchema, language: 
       if (uploadError) throw uploadError;
     }
 
-    // Initiate payment
-    const paymentUrl = await initiateSISPPayment({
-      amount: fees.total,
-      currency: 'EUR',
-      reference: application.reference_number,
-      description: language === 'en' ? 'Visa Assistance' : 'Assistência Visto',
-      returnUrl: `${window.location.origin}/payment/success`,
-      cancelUrl: `${window.location.origin}/payment/cancel`
-    });
+    // For development, simulate payment URL
+    const paymentUrl = `/payment/result?reference=${application.reference_number}`;
 
-    // Send confirmation email
-    await sendEmail({
-      to: data.agencyEmail,
-      ...generateConfirmationEmail({
-        reference: application.reference_number,
-        name: data.agencyName,
-        amount: fees.total,
-        type: 'agency'
-      }, language)
-    });
+    // Store reference for status checking
+    localStorage.setItem('applicationReference', application.reference_number);
 
-    return { success: true, paymentUrl, reference: application.reference_number };
+    return { 
+      success: true, 
+      paymentUrl, 
+      reference: application.reference_number 
+    };
   } catch (error) {
     console.error('Application submission failed:', error);
+    
+    // Show user-friendly error message
+    const errorMessage = language === 'en'
+      ? 'Failed to submit application. Please try again.'
+      : 'Falha ao enviar pedido. Por favor, tente novamente.';
+    
+    toast.error(errorMessage);
+    
     throw error;
   }
 }
 
 export async function getApplicationStatus(reference: string) {
-  const { data, error } = await supabase
-    .from('applications')
-    .select(`
-      *,
-      tourist_applications (*),
-      agency_applications (*)
-    `)
-    .eq('reference_number', reference)
-    .single();
+  try {
+    // Set the reference number in the current session
+    await supabase.rpc('set_reference_number', { ref: reference });
 
-  if (error) throw error;
-  return data;
+    const { data, error } = await supabase
+      .from('applications')
+      .select(`
+        *,
+        tourist_applications (*),
+        agency_applications (*)
+      `)
+      .eq('reference_number', reference)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch application status:', error);
+    throw error;
+  }
 }
